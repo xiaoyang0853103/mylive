@@ -1,0 +1,94 @@
+name: TVBox Decrypt
+
+on:
+  # 手动触发
+  workflow_dispatch:
+  
+  # 定时触发：每天 UTC 12:00 (北京时间 20:00) 和 UTC 00:00 (北京时间 08:00)
+  schedule:
+    - cron: '0 12 * * *'   # 北京时间 20:00
+    - cron: '0 0 * * *'    # 北京时间 08:00
+
+  # 当url.txt或脚本变更时自动触发
+  push:
+    paths:
+      - 'url.txt'
+      - 'decrypt.py'
+      - '.github/workflows/decrypt.yml'
+
+jobs:
+  decrypt:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install requests pycryptodome
+        
+    - name: Run decrypt script
+      run: |
+        python decrypt.py
+        
+    - name: Check if live.txt was generated
+      run: |
+        if [ -f "live.txt" ]; then
+          echo "✅ live.txt generated successfully"
+          ls -lh live.txt
+          head -n 50 live.txt
+        else
+          echo "❌ live.txt not found"
+          exit 1
+        fi
+        
+    - name: Commit and push if changed
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        
+        # 添加生成的文件
+        git add live.txt live_report.json
+        
+        # 检查是否有变更
+        if git diff --staged --quiet; then
+          echo "ℹ️ No changes to commit"
+        else
+          git commit -m "🔓 Auto-decrypt TVBox interfaces [$(date +'%Y-%m-%d %H:%M:%S')]"
+          git push
+          echo "✅ Changes committed and pushed"
+        fi
+        
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: decrypt-results
+        path: |
+          live.txt
+          live_report.json
+        retention-days: 30
+        
+    - name: Create release on manual trigger
+      if: github.event_name == 'workflow_dispatch'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: decrypt-${{ github.run_number }}
+        name: TVBox Decrypt Results #${{ github.run_number }}
+        body: |
+          自动解密结果生成于 ${{ github.event.head_commit.timestamp }}
+          
+          - 触发方式: ${{ github.event_name }}
+          - 运行编号: ${{ github.run_number }}
+        files: |
+          live.txt
+          live_report.json
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
