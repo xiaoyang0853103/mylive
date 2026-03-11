@@ -1,6 +1,6 @@
 name: TVBox Decrypt
 
-on:
+于:
   # 手动触发
   workflow_dispatch:
   
