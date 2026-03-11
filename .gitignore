@@ -1,23 +1,5 @@
-# Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
-.Python
-env/
-venv/
-.env
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# 临时文件（保留live.txt和live_report.json用于GitHub Pages或下载）
-*.tmp
 *.log
+.env
+venv/
